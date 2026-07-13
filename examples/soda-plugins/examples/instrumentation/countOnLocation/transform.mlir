@@ -11,8 +11,10 @@ module @transforms attributes { transform.with_named_sequence } {
 
     transform.include @tiling failures(propagate) (%matmul_tile) : (!transform.any_op) -> ()
 
-    // Pass to instrument the loop bounds with hardware counters.
-    %f = transform.apply_registered_pass "soda-instr-hw-counters-at-loop-bounds" to %func : (!transform.any_op) -> !transform.any_op
+    // Pass to instrument loop bounds with a single-active-counter
+    // (change-location) hardware counter, instead of many concurrent
+    // start/stop counters.
+    %f = transform.apply_registered_pass "soda-instr-change-location" to %func : (!transform.any_op) -> !transform.any_op
 
     transform.yield
   }
@@ -22,10 +24,10 @@ module @transforms attributes { transform.with_named_sequence } {
     %1 = transform.get_parent_op %L {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
     %2 = transform.get_parent_op %L {op_name = "scf.for", nth_parent=2} : (!transform.any_op) -> !transform.op<"scf.for">
     %3 = transform.get_parent_op %L {op_name = "scf.for", nth_parent=3} : (!transform.any_op) -> !transform.op<"scf.for">
-    transform.loop.unroll %1 { factor = 1} : !transform.op<"scf.for"> 
-    transform.loop.unroll %2 { factor = 1} : !transform.op<"scf.for"> 
-    transform.loop.unroll %3 { factor = 1} : !transform.op<"scf.for"> 
-    transform.yield  
+    transform.loop.unroll %1 { factor = 1} : !transform.op<"scf.for">
+    transform.loop.unroll %2 { factor = 1} : !transform.op<"scf.for">
+    transform.loop.unroll %3 { factor = 1} : !transform.op<"scf.for">
+    transform.yield
   }
 
   transform.named_sequence @match_tile_matmul(
